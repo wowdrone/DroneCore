@@ -29,7 +29,7 @@ public:
 private:
     struct Timeout {
         std::function<void()> callback;
-        dl_time_t time;
+        dc_time_t time;
         double duration_s;
     };
 

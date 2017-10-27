@@ -52,7 +52,7 @@ private:
     unsigned _bytes_at_sdk_overall = 0;
 
     bool _first = true;
-    dl_time_t _last_time;
+    dc_time_t _last_time;
 
     double _time_elapsed = 0.0;
 #endif

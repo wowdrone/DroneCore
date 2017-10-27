@@ -6,7 +6,7 @@
 namespace dronecore {
 
 
-dl_time_t steady_time()
+dc_time_t steady_time()
 {
     using std::chrono::steady_clock;
 
@@ -23,7 +23,7 @@ double elapsed_s()
            static_cast<double>(steady_clock::period::den);
 }
 
-double elapsed_since_s(const dl_time_t &since)
+double elapsed_since_s(const dc_time_t &since)
 {
     using std::chrono::steady_clock;
 
@@ -33,12 +33,11 @@ double elapsed_since_s(const dl_time_t &since)
            static_cast<double>(steady_clock::period::den);
 }
 
-dl_time_t steady_time_in_future(double duration_s)
+dc_time_t steady_time_in_future(double duration_s)
 {
     auto now = std::chrono::steady_clock::now();
     return now + std::chrono::milliseconds(int64_t(duration_s * 1e3));
 }
-
 
 double to_rad_from_deg(double deg)
 {

@@ -31,13 +31,13 @@
 
 namespace dronecore {
 
-typedef std::chrono::time_point<std::chrono::steady_clock> dl_time_t;
+typedef std::chrono::time_point<std::chrono::steady_clock> dc_time_t;
 
 dl_time_t steady_time();
 dl_time_t steady_time_in_future(double duration_s);
 
 double elapsed_s();
-double elapsed_since_s(const dl_time_t &since);
+double elapsed_since_s(const dn_time_t &since);
 
 double to_rad_from_deg(double deg);
 double to_deg_from_rad(double rad);

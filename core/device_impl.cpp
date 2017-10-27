@@ -211,7 +211,7 @@ void DeviceImpl::heartbeats_timed_out()
 
 void DeviceImpl::device_thread(DeviceImpl *self)
 {
-    dl_time_t last_time {};
+    dc_time_t last_time {};
 
     while (!self->_should_exit) {
 
