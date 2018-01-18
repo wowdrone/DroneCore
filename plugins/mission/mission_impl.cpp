@@ -204,33 +204,48 @@ void MissionImpl::process_mission_item_int(const mavlink_message_t &message)
     auto mission_item_int_ptr = std::make_shared<mavlink_mission_item_int_t>();
     mavlink_msg_mission_item_int_decode(&message, mission_item_int_ptr.get());
 
-    _mavlink_mission_items_downloaded.push_back(mission_item_int_ptr);
-
     if (mission_item_int_ptr->seq == _next_mission_item_to_download) {
         LogDebug() << "Received mission item " << _next_mission_item_to_download;
-    }
 
-    if (_next_mission_item_to_download + 1 == _num_mission_items_to_download) {
-        _parent->unregister_timeout_handler(_timeout_cookie);
+        _mavlink_mission_items_downloaded.push_back(mission_item_int_ptr);
 
-        mavlink_message_t ack_message;
-        mavlink_msg_mission_ack_pack(_parent->get_own_system_id(),
-                                     _parent->get_own_component_id(),
-                                     &ack_message,
-                                     _parent->get_target_system_id(),
-                                     _parent->get_target_component_id(),
-                                     MAV_MISSION_ACCEPTED,
-                                     MAV_MISSION_TYPE_MISSION);
+        if (_next_mission_item_to_download + 1 == _num_mission_items_to_download) {
 
-        _parent->send_message(ack_message);
+            // Wrap things up if we're finished.
+            _parent->unregister_timeout_handler(_timeout_cookie);
 
-        assemble_mission_items();
+            mavlink_message_t ack_message;
+            mavlink_msg_mission_ack_pack(_parent->get_own_system_id(),
+                                         _parent->get_own_component_id(),
+                                         &ack_message,
+                                         _parent->get_target_system_id(),
+                                         _parent->get_target_component_id(),
+                                         MAV_MISSION_ACCEPTED,
+                                         MAV_MISSION_TYPE_MISSION);
+
+            _parent->send_message(ack_message);
+
+            assemble_mission_items();
+
+        } else {
+            // Otherwise keep going.
+            ++_next_mission_item_to_download;
+            _parent->refresh_timeout_handler(_timeout_cookie);
+            download_next_mission_item();
+        }
 
     } else {
-        ++_next_mission_item_to_download;
+        LogDebug() << "Received mission item " << int(mission_item_int_ptr->seq)
+                   << " instead of " << _next_mission_item_to_download << " (ignored)";
+
+        // Refresh because we at least still seem to be active.
         _parent->refresh_timeout_handler(_timeout_cookie);
+
+        // And request it again in case our request got lost.
         download_next_mission_item();
+        return;
     }
+
 }
 
 void MissionImpl::upload_mission_async(const std::vector<std::shared_ptr<MissionItem>>
