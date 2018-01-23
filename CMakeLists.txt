@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_INSTALL_PREFIX "../install" CACHE PATH "default cache path")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 project(dronecore)
 
@@ -307,28 +306,11 @@ if(NOT IOS AND NOT ANDROID)
     set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_DEBUG} --coverage")
     set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} --coverage")
 
-    find_package(GRPC)
-    if(GRPC_FOUND)
-
-        # If protobuf is installed to e.g. /opt/protobuf, you need to specifiy this via environment variable:
-        # `export PROTOBUF_DIR=/opt/protobuf`
-        #
-        if (DEFINED ENV{PROTOBUF_DIR})
-            message(STATUS "PROTOBUF_DIR manually set, using protobuf from $ENV{PROTOBUF_DIR}")
-            set(Protobuf_INCLUDE_DIRS "$ENV{PROTOBUF_DIR}/include")
-            set(Protobuf_PROTOC_EXECUTABLE "$ENV{PROTOBUF_DIR}/bin/protoc")
-            set(Protobuf_PROTOC_LIBRARY_DIR "$ENV{PROTOBUF_DIR}/lib")
-            set(Protobuf_PROTOC_LIBRARIES "$ENV{PROTOBUF_DIR}/lib/libprotoc.so")
-            set(Protobuf_LIBRARIES "$ENV{PROTOBUF_DIR}/lib/libprotobuf.so")
-        else()
-            message(STATUS "PROTOBUF_DIR not set, checking automatically for Protobuf")
-            find_package(Protobuf REQUIRED)
-        endif()
-
+    if (CMAKE_BUILD_DRONECORESERVER)
+        message(STATUS "Building dronecore server")
         add_subdirectory(grpc/server)
-        add_subdirectory(grpc/python_client)
     else()
-        message(STATUS "gRPC not found, skipping gRPC build")
+        message(STATUS "BUILD_DRONECORESERVER not set: not building dronecore server")
     endif()
 endif()
 

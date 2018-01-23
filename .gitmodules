@@ -13,3 +13,6 @@
 [submodule "libs/json11"]
 	path = libs/json11
 	url = https://github.com/dropbox/json11
+[submodule "grpc/server/proto"]
+	path = grpc/server/proto
+	url = https://github.com/dronecore/DroneCore-Proto.git
