@@ -99,13 +99,13 @@ include(autogenerate_plugin_container.cmake)
 include_directories(
     include
     libs/include
-    libs/json11
     core
     ${plugins}
     ${external_plugins}
     ${CMAKE_CURRENT_BINARY_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/core
     SYSTEM ${additional_includes}
+    SYSTEM libs/json11
 )
 
 if (DEFINED additional_includes AND NOT additional_includes STREQUAL "")
