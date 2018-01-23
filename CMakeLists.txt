@@ -99,6 +99,7 @@ include(autogenerate_plugin_container.cmake)
 include_directories(
     include
     libs/include
+    libs/json11
     core
     ${plugins}
     ${external_plugins}
@@ -131,6 +132,9 @@ else()
     set(library_type "SHARED")
 endif()
 
+# JSON parser library for parsing QGC plan for Mission
+add_subdirectory(libs/json11)
+
 # We build one static library.
 add_library(dronecore ${library_type}
     core/global_include.cpp
@@ -159,6 +163,7 @@ target_link_libraries(dronecore
     ${CMAKE_THREAD_LIBS_INIT}
     ${curl_lib}
     tinyxml2
+    json11
 )
 if (MSVC)
     target_link_libraries(dronecore
