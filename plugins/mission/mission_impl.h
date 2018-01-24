@@ -54,7 +54,7 @@ private:
 
     void process_timeout();
 
-    void upload_mission_item(uint16_t seq);
+    void upload_next_mission_item();
 
     void copy_mission_item_vector(const std::vector<std::shared_ptr<MissionItem>> &mission_items);
 
@@ -86,6 +86,9 @@ private:
         SEND_COMMAND
     } _activity = Activity::NONE;
 
+    unsigned _retries = 0;
+    static constexpr unsigned MAX_RETRIES = 3;
+
     int _last_current_mavlink_mission_item = -1;
     int _last_reached_mavlink_mission_item = -1;
 
@@ -109,6 +112,9 @@ private:
     int _next_mission_item_to_download = -1;
     std::vector<std::shared_ptr<mavlink_mission_item_int_t>> _mavlink_mission_items_downloaded {};
 
+    int _next_mission_item_to_upload = -1;
+
+    static constexpr double TIMEOUT_S = 0.5;
     void *_timeout_cookie = nullptr;
 };
 

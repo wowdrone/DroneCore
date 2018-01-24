@@ -70,7 +70,6 @@ void MissionImpl::process_mission_request(const mavlink_message_t &unused)
                                  MAV_MISSION_UNSUPPORTED,
                                  MAV_MISSION_TYPE_MISSION);
 
-
     _parent->send_message(message);
 
     // Reset the timeout because we're still communicating.
@@ -96,7 +95,9 @@ void MissionImpl::process_mission_request_int(const mavlink_message_t &message)
         return;
     }
 
-    upload_mission_item(mission_request_int.seq);
+    _next_mission_item_to_upload = mission_request_int.seq;
+    _retries = 0;
+    upload_next_mission_item();
 
 
     // Reset the timeout because we're still communicating.
@@ -208,6 +209,7 @@ void MissionImpl::process_mission_item_int(const mavlink_message_t &message)
         LogDebug() << "Received mission item " << _next_mission_item_to_download;
 
         _mavlink_mission_items_downloaded.push_back(mission_item_int_ptr);
+        _retries = 0;
 
         if (_next_mission_item_to_download + 1 == _num_mission_items_to_download) {
 
@@ -283,6 +285,9 @@ void MissionImpl::upload_mission_async(const std::vector<std::shared_ptr<Mission
         return;
     }
 
+    _parent->register_timeout_handler(std::bind(&MissionImpl::process_timeout, this), TIMEOUT_S,
+                                      &_timeout_cookie);
+
     _activity = Activity::SET_MISSION;
     _result_callback = callback;
 }
@@ -310,12 +315,13 @@ void MissionImpl::download_mission_async(const Mission::mission_items_and_result
         return;
     }
 
-    _parent->register_timeout_handler(std::bind(&MissionImpl::process_timeout, this), 1.0,
+    _parent->register_timeout_handler(std::bind(&MissionImpl::process_timeout, this), TIMEOUT_S,
                                       &_timeout_cookie);
 
     // Clear our internal cache and re-populate it.
     _mavlink_mission_items_downloaded.clear();
     _activity = Activity::GET_MISSION;
+    _retries = 0;
     _mission_items_and_result_callback = callback;
 }
 
@@ -756,15 +762,16 @@ void MissionImpl::set_current_mission_item_async(int current, Mission::result_ca
     _result_callback = callback;
 }
 
-void MissionImpl::upload_mission_item(uint16_t seq)
+void MissionImpl::upload_next_mission_item()
 {
-    LogDebug() << "Send mission item " << int(seq);
-    if (seq >= _mavlink_mission_item_messages.size()) {
+    LogDebug() << "Send mission item " << _next_mission_item_to_upload;
+    if (_next_mission_item_to_upload >= int(_mavlink_mission_item_messages.size()) ||
+        _next_mission_item_to_upload < 0) {
         LogErr() << "Mission item requested out of bounds.";
         return;
     }
 
-    _parent->send_message(*_mavlink_mission_item_messages.at(seq));
+    _parent->send_message(*_mavlink_mission_item_messages.at(_next_mission_item_to_upload));
 }
 
 void MissionImpl::copy_mission_item_vector(const std::vector<std::shared_ptr<MissionItem>>
@@ -890,10 +897,34 @@ void MissionImpl::process_timeout()
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    LogErr() << "Mission handling timed out.";
 
-    if (_activity != Activity::NONE) {
-        report_mission_result(_result_callback, Mission::Result::TIMEOUT);
+    if (_activity == Activity::SET_MISSION) {
+        if (_retries++ > MAX_RETRIES) {
+            _activity = Activity::NONE;
+            _retries = 0;
+            LogWarn() << "Mission handling timed out while uploading mission.";
+            report_mission_result(_result_callback, Mission::Result::TIMEOUT);
+        } else {
+            LogWarn() << "Retrying setting mission item...";
+            _parent->register_timeout_handler(std::bind(&MissionImpl::process_timeout, this), TIMEOUT_S,
+                                              &_timeout_cookie);
+            upload_next_mission_item();
+        }
+
+    } else if (_activity == Activity::GET_MISSION) {
+        if (_retries++ > MAX_RETRIES) {
+            _activity = Activity::NONE;
+            _retries = 0;
+            LogWarn() << "Mission handling timed out while downloading mission.";
+            report_mission_result(_result_callback, Mission::Result::TIMEOUT);
+        } else {
+            LogWarn() << "Retrying requesting mission item...";
+            _parent->register_timeout_handler(std::bind(&MissionImpl::process_timeout, this), TIMEOUT_S,
+                                              &_timeout_cookie);
+            download_next_mission_item();
+        }
+    } else {
+        LogWarn() << "unknown mission timeout";
     }
 }
 
